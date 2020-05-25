@@ -3,6 +3,7 @@ package brugerautorisation.data;
 public class Spiller {
 
     String studienr;
+    String fornavn;
     String score;
     String password;
 
@@ -22,6 +23,14 @@ public class Spiller {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getFornavn() {
+        return fornavn;
+    }
+
+    public void setFornavn(String fornavn) {
+        this.fornavn = fornavn;
     }
 
     public String getStudienr(){

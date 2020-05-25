@@ -1,34 +1,31 @@
 import REST.JavalinApi;
+import brugerautorisation.data.Bruger;
 import brugerautorisation.data.Spiller;
 import com.google.cloud.firestore.Firestore;
+import com.google.gson.Gson;
 import firebase.FirebaseInitialize;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
+
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class Konsolprogram {
 
     private JavalinApi javalinApi;
     private Scanner scanner = new Scanner(System.in);
-    private static final String KEY_NAVN = "navn";
-    private static final String KEY_SCORE = "score";
     private String userFirstName;
 
-    private static FirebaseInitialize firebaseInitialize;
-    private static Firestore db;
-
     public Konsolprogram(){
-        firebaseInitialize = new FirebaseInitialize();
-        db = firebaseInitialize.initialize();
         retrofitInitialize();
     }
 
     public void retrofitInitialize(){
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("http://18.219.143.210:8080/")
+                .baseUrl("http://localhost:8080/")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
 
@@ -36,15 +33,22 @@ public class Konsolprogram {
     }
 
     public void login(Spiller spiller){
-        Call<String> call = javalinApi.login(spiller);
+        Call<Bruger> call = javalinApi.login(spiller);
 
-        call.enqueue(new Callback<String>() {
+        call.enqueue(new Callback<Bruger>() {
             @Override
-            public void onResponse(Call<String> call, Response<String> response) {
+            public void onResponse(Call<Bruger> call, Response<Bruger> response) {
 
                 if (response.isSuccessful()){
-                    userFirstName = response.body();
-                    uploadHighscore(spiller.getStudienr());
+                    Bruger bruger = response.body();
+                    if (bruger != null) {
+                        userFirstName = bruger.fornavn;
+                    } else {
+                        System.out.println("Fejl: tomt brugerobjekt.");
+                        return;
+                    }
+                    spiller.setFornavn(bruger.fornavn);
+                    uploadHighscore(spiller);
                 } else {
                     System.out.println("Fejl. Prøv venligst igen.");
                     velkomst();
@@ -52,31 +56,39 @@ public class Konsolprogram {
             }
 
             @Override
-            public void onFailure(Call<String> call, Throwable t) {
+            public void onFailure(Call<Bruger> call, Throwable t) {
 
             }
         });
     }
 
-    public void uploadHighscore(String studienr){
+    public void uploadHighscore(Spiller spiller){
         System.out.println("Indtast score at gemme: ");
         String score = scanner.nextLine();
-        Spiller spiller = new Spiller(studienr, "", score);
+        spiller.setScore(score);
 
-        Call<String> call = javalinApi.uploadHighscore(spiller);
-        call.enqueue(new Callback<String>() {
+        Call<Spiller> call = javalinApi.uploadHighscore(spiller);
+        call.enqueue(new Callback<Spiller>() {
             @Override
-            public void onResponse(Call<String> call, Response<String> response) {
+            public void onResponse(Call<Spiller> call, Response<Spiller> response) {
+                if (response.isSuccessful()){
+                    System.out.println("Score gemt.");
+                } else {
+                    System.out.println("Der opstod en fejl. Kunne ikke gemme scoren.");
+                }
 
             }
 
             @Override
-            public void onFailure(Call<String> call, Throwable throwable) {
+            public void onFailure(Call<Spiller> call, Throwable throwable) {
 
             }
         });
-
-
+        try {
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         velkomst();
     }
 
